@@ -1,0 +1,45 @@
+_min_copier_version: "9.0.0"
+_subdirectory: template
+_templates_suffix: .jinja
+_answers_file: .copier-answers.yml
+
+plugin_label:
+  type: str
+  help: Plugin name (shown in the Ocelescope UI)
+  default: My Plugin
+  validator: >-
+    {% if not (plugin_label | regex_search('[A-Za-z0-9]')) %}Plugin name must contain at least one letter or digit{% endif %}
+    {% if '"' in plugin_label %}Plugin name must not contain double quotes{% endif %}
+
+# Derived from plugin_label; not asked and not stored in the answers file.
+project_name:
+  type: str
+  when: false
+  default: "{{ plugin_label | lower | regex_replace('[^a-z0-9]+', '-') | trim('-') }}"
+
+package_name:
+  type: str
+  when: false
+  default: >-
+    {% set name = project_name | replace('-', '_') %}{{ 'plugin_' ~ name if name[:1].isdigit() else name }}
+
+class_name:
+  type: str
+  when: false
+  default: >-
+    {% set ns = namespace(name='') %}{% for word in (plugin_label | regex_replace('[^A-Za-z0-9]+', ' ') | trim).split(' ') %}{% set ns.name = ns.name ~ word[:1] | upper ~ word[1:] %}{% endfor %}{{ 'Plugin' ~ ns.name if ns.name[:1].isdigit() else ns.name }}
+
+description:
+  type: str
+  help: Short description
+  default: An Ocelescope plugin
+  validator: >-
+    {% if '"' in description %}Description must not contain double quotes{% endif %}
+
+_message_after_copy: |
+  Created plugin "{{ plugin_label | trim }}" in {{ _copier_conf.dst_path }}
+
+  Next steps:
+    cd {{ _copier_conf.dst_path }}
+    uv sync
+    uv run ocelescope build
